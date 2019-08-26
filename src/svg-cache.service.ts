@@ -1,6 +1,6 @@
 import { Inject, Injectable, Optional, Renderer2, RendererFactory2 } from '@angular/core';
 import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpBackend, HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, finalize, share } from 'rxjs/operators';
 
@@ -14,6 +14,7 @@ export class SVGCacheService {
   private static _inProgressReqs: Map<string, Observable<SVGElement>>;
 
   private _baseUrl: string;
+  private _http: HttpClient;
 
   private _renderer: Renderer2;
 
@@ -21,8 +22,9 @@ export class SVGCacheService {
     @Optional() @Inject(APP_BASE_HREF) private _appBase: string,
     @Optional() private _location: PlatformLocation,
     @Optional() private _config: InlineSVGConfig,
-    private _http: HttpClient,
+    private http: HttpBackend,
     rendererFactory: RendererFactory2) {
+    this._http = new HttpClient(this.http);
     this._renderer = rendererFactory.createRenderer(null, null);
 
     this.setBaseUrl();

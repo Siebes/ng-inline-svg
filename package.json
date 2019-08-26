@@ -1,10 +1,10 @@
 {
   "name": "ng-inline-svg",
-  "version": "9.0.0",
+  "version": "9.0.1",
   "description": "Angular directive for inserting an SVG inline within an element.",
   "repository": {
     "type": "git",
-    "url": "https://github.com/arkon/ng-inline-svg.git"
+    "url": "https://github.com/andrewgould/ng-inline-svg.git"
   },
   "homepage": "http://echeung.me/ng-inline-svg/",
   "bugs": {
@@ -17,6 +17,9 @@
     "LICENSE"
   ],
   "author": "Eugene Cheung",
+  "contributors": [
+    "Andrew Gould"
+  ],
   "license": "MIT",
   "keywords": [
     "angular",
