@@ -1,5 +1,9 @@
 # ng-inline-svg
 
+⚠️　**This package is not actively maintained.** ⚠️
+
+---
+
 [![NPM](https://nodei.co/npm/ng-inline-svg.png?compact=true)](https://nodei.co/npm/ng-inline-svg)
 
 **[Demo](https://echeung.me/ng-inline-svg)**
@@ -64,6 +68,7 @@ The SVG file (if found) will be inserted *inside* the element with the `[inlineS
 | Property name | Type | Default | Description |
 | ------------- | ---- | ------- | ----------- |
 | cacheSVG | boolean | `true` | Caches the SVG based on the absolute URL. Cache only persists for the (sessional) lifetime of the page. |
+| resolveSVGUrl | boolean | `true` | Bypass logic that tries to determine the absolute URL using the page's or configured base URL. |
 | prepend | boolean | `false` | Inserts before the first child instead of appending, overwrites `replaceContents` |
 | replaceContents | boolean | `true` | Replaces the contents of the element with the SVG instead of just appending it to its children. |
 | injectComponent | boolean | `false` | Injects an `<inline-svg>` component containing the SVG inside the element with the directive. |
@@ -72,6 +77,7 @@ The SVG file (if found) will be inserted *inside* the element with the `[inlineS
 | forceEvalStyles | boolean | `false` | Forces embeded style tags' contents to be evaluated (for IE 11). |
 | evalScripts | `'always'`, `'once'`, `'none'` | `'always'` | Whether to evaluate embedded scripts in the loaded SVG files. The `SVGScriptEvalMode` enum is also provided. |
 | fallbackImgUrl | string | | URL for a regular image to be displayed as a fallback if the SVG fails to load. |
+| fallbackSVG | string | | SVG filename to be displayed as a fallback if the SVG fails to load. |
 | onSVGLoaded | `(svg: SVGElement, parent: Element \| null) => SVGElement` | | Lifecycle hook that allows the loaded SVG to be manipulated prior to insertion. |
 
 #### Outputs
@@ -91,11 +97,11 @@ Here is one way to achieve this dynamically by adding an app initalizing service
 ```typescript
 import { NgModule, APP_INITIALIZER } from '@angular/core';
 import { InlineSVGConfig } from 'ng-inline-svg';
-import { SVGonfig } from './svg-config';
- 
+import { SVGConfig } from './svg-config';
+
 @NgModule({
   providers: [
-    { provide: InlineSVGConfig, useClass: SVGonfig }
+    { provide: InlineSVGConfig, useClass: SVGConfig }
   ]
 })
 export class AppServerModule {}
@@ -107,7 +113,7 @@ import { Injectable, Inject } from '@angular/core';
 import { InlineSVGConfig } from 'ng-inline-svg';
 
 @Injectable()
-export class SVGonfig extends InlineSVGConfig {
+export class SVGConfig extends InlineSVGConfig {
   // Do what ever conditions you need to set this, e.g. checking for server-side rendering
   // and only set baseURL when server-side rendered if you want.
 
@@ -115,12 +121,15 @@ export class SVGonfig extends InlineSVGConfig {
     super();
 
     // When the server-side rendered app runs on localhost:3000, make sure baseURL is
-    // http://localhost:3000 and make sure the Express server is configured properly to 
+    // http://localhost:3000 and make sure the Express server is configured properly to
     // allow the URL of the asset folders storing the SVG files.
     this.baseUrl = 'http://localhost:3000';
 
     // If you don't want the directive to run on the server side.
     this.clientOnly = true;
+
+    // If you want to bypass your HttpClient interceptor chain when fetching SVGs.
+    this.bypassHttpClientInterceptorChain = true;
   }
 }
 ```

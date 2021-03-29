@@ -1,9 +1,8 @@
-import { Inject, Injectable, Optional, Renderer2, RendererFactory2 } from '@angular/core';
 import { APP_BASE_HREF, PlatformLocation } from '@angular/common';
 import { HttpBackend, HttpClient } from '@angular/common/http';
+import { Inject, Injectable, Optional, Renderer2, RendererFactory2 } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { map, finalize, share } from 'rxjs/operators';
-
+import { finalize, map, share } from 'rxjs/operators';
 import { InlineSVGConfig } from './inline-svg.config';
 
 @Injectable({
@@ -14,17 +13,22 @@ export class SVGCacheService {
   private static _inProgressReqs: Map<string, Observable<SVGElement>>;
 
   private _baseUrl: string;
-  private _http: HttpClient;
 
+  private _http: HttpClient;
   private _renderer: Renderer2;
 
   constructor(
     @Optional() @Inject(APP_BASE_HREF) private _appBase: string,
     @Optional() private _location: PlatformLocation,
     @Optional() private _config: InlineSVGConfig,
-    private http: HttpBackend,
-    rendererFactory: RendererFactory2) {
-    this._http = new HttpClient(this.http);
+    httpClient: HttpClient,
+    httpBackend: HttpBackend,
+    rendererFactory: RendererFactory2
+  ) {
+    this._http = _config && !_config.bypassHttpClientInterceptorChain
+      ? httpClient
+      : new HttpClient(httpBackend);
+
     this._renderer = rendererFactory.createRenderer(null, null);
 
     this.setBaseUrl();
@@ -37,34 +41,36 @@ export class SVGCacheService {
     }
   }
 
-  getSVG(url: string, cache: boolean = true): Observable<SVGElement> {
-    const absUrl = this.getAbsoluteUrl(url);
+  getSVG(url: string, resolveSVGUrl: boolean, cache: boolean = true): Observable<SVGElement> {
+    const svgUrl = (resolveSVGUrl
+      ? this.getAbsoluteUrl(url)
+      : url).replace(/#.+$/, '');
 
     // Return cached copy if it exists
-    if (cache && SVGCacheService._cache.has(absUrl)) {
-      return of(this._cloneSVG(SVGCacheService._cache.get(absUrl)));
+    if (cache && SVGCacheService._cache.has(svgUrl)) {
+      return of(this._cloneSVG(SVGCacheService._cache.get(svgUrl)));
     }
 
     // Return existing fetch observable
-    if (SVGCacheService._inProgressReqs.has(absUrl)) {
-      return SVGCacheService._inProgressReqs.get(absUrl);
+    if (SVGCacheService._inProgressReqs.has(svgUrl)) {
+      return SVGCacheService._inProgressReqs.get(svgUrl);
     }
 
     // Otherwise, make the HTTP call to fetch
-    const req = this._http.get(absUrl, { responseType: 'text' })
+    const req = this._http.get(svgUrl, { responseType: 'text' })
       .pipe(
         finalize(() => {
-          SVGCacheService._inProgressReqs.delete(absUrl);
+          SVGCacheService._inProgressReqs.delete(svgUrl);
         }),
         share(),
         map((svgText: string) => {
           const svgEl = this._svgElementFromString(svgText);
-          SVGCacheService._cache.set(absUrl, svgEl);
+          SVGCacheService._cache.set(svgUrl, svgEl);
           return this._cloneSVG(svgEl);
         })
       );
 
-    SVGCacheService._inProgressReqs.set(absUrl, req);
+    SVGCacheService._inProgressReqs.set(svgUrl, req);
 
     return req;
   }

@@ -31,6 +31,7 @@ import * as SvgUtil from './svg-util';
 })
 export class InlineSVGDirective implements OnInit, OnChanges, OnDestroy {
   @Input() inlineSVG: string;
+  @Input() resolveSVGUrl: boolean = true;
   @Input() replaceContents: boolean = true;
   @Input() prepend: boolean = false;
   @Input() injectComponent: boolean = false;
@@ -40,6 +41,7 @@ export class InlineSVGDirective implements OnInit, OnChanges, OnDestroy {
   @Input() forceEvalStyles: boolean = false;
   @Input() evalScripts: SVGScriptEvalMode = SVGScriptEvalMode.ALWAYS;
   @Input() fallbackImgUrl: string;
+  @Input() fallbackSVG: string;
   @Input() onSVGLoaded: (svg: SVGElement, parent: Element | null) => SVGElement;
 
   @Output() onSVGInserted: EventEmitter<SVGElement> = new EventEmitter<SVGElement>();
@@ -80,8 +82,9 @@ export class InlineSVGDirective implements OnInit, OnChanges, OnDestroy {
   ngOnChanges(changes: SimpleChanges): void {
     if (!this._isValidPlatform() || this._isSSRDisabled()) { return; }
 
-    if (changes['inlineSVG']) {
-      this._insertSVG();
+    const setSVGAttributesChanged = Boolean(changes['setSVGAttributes']);
+    if (changes['inlineSVG'] || setSVGAttributesChanged) {
+      this._insertSVG(setSVGAttributesChanged);
     }
   }
 
@@ -91,7 +94,7 @@ export class InlineSVGDirective implements OnInit, OnChanges, OnDestroy {
     }
   }
 
-  private _insertSVG(): void {
+  private _insertSVG(force = false): void {
     if (!isPlatformServer(this.platformId) && !this._supportsSVG) { return; }
 
     // Check if a URL was actually passed into the directive
@@ -101,12 +104,12 @@ export class InlineSVGDirective implements OnInit, OnChanges, OnDestroy {
     }
 
     // Short circuit if SVG URL hasn't changed
-    if (this.inlineSVG === this._prevUrl) {
+    if (!force && this.inlineSVG === this._prevUrl) {
       return;
     }
     this._prevUrl = this.inlineSVG;
 
-    this._subscription = this._svgCache.getSVG(this.inlineSVG, this.cacheSVG)
+    this._subscription = this._svgCache.getSVG(this.inlineSVG, this.resolveSVGUrl, this.cacheSVG)
       .subscribe(
         (svg: SVGElement) => {
           if (SvgUtil.isUrlSymbol(this.inlineSVG)) {
@@ -165,7 +168,7 @@ export class InlineSVGDirective implements OnInit, OnChanges, OnDestroy {
    *
    * @param el The element to put within the directive.
    */
-  private _insertEl(el: Element): void {
+  private _insertEl(el: HTMLElement | SVGElement): void {
     if (this.injectComponent) {
       if (!this._svgComp) {
         const factory = this._resolver.resolveComponentFactory(InlineSVGComponent);
@@ -196,6 +199,9 @@ export class InlineSVGDirective implements OnInit, OnChanges, OnDestroy {
       this._renderer.setAttribute(elImg, 'src', this.fallbackImgUrl);
 
       this._insertEl(elImg);
+    } else if (this.fallbackSVG && this.fallbackSVG !== this.inlineSVG) {
+      this.inlineSVG = this.fallbackSVG;
+      this._insertSVG();
     }
   }
 
